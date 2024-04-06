@@ -1,56 +1,5 @@
 # Notas Unit Testing con Java (JUnit y Mockito)
 
-## Temas
-
-### JUnit 5
-
-- TDD (Test Driven Development)
-- Assertions
-- assertThrows
-- assertAll
-- Anotaciones
-    - @DisplayName
-    - @Disabled
-- Ciclo de vida de una prueba
-    - @BeforeAll
-    - @BeforeEach
-    - @AfterEach
-    - @AfterAll
-- Test condicionales
-    - @EnabledOnOs
-    - @EnabledOnJre
-- Assumptions
-- Test anidados
-    - @Nested
-- @RepeatedTest
-- @ParameterizedTest
-- @Tag
-- Inyección de dependencias
-
-### Mockito
-
-- Dependencia mock
-- verify
-- Anotaciones
-    - @Mock
-    - @InjectMock
-    - @Captor
-    - @ExtendWith
-- Excepciones thenThrow
-- Argument matcher
-- Argument capture
-- Familia de métodos do...
-- Spy
-
-### Spring Boot Test
-
-- Integraciones con JUnit 5 y Mockito
-- Anotaciones @MockBean y @Autowired
-- MockMvc
-    - @WebMvcTest
-    - @DataJpaTest
-
-
 ## Que son las pruebas unitarias
 
 Las pruebas unitarias son un proceso de examen para verificar que una pieza de código cumple con ciertas reglas de negocio y afirmar un resultado esperado
