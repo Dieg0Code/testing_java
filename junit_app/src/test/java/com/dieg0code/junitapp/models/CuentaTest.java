@@ -1,5 +1,6 @@
 package com.dieg0code.junitapp.models;
 
+import com.dieg0code.junitapp.exceptions.DineroInsuficienteException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -15,6 +16,8 @@ class CuentaTest {
         String expectedValue = "Diego";
         String actualValue = cuenta.getPersona();
 
+        assertNotNull(actualValue);
+
         assertEquals(expectedValue, actualValue);
 
         assertTrue(actualValue.equals("Diego"));
@@ -23,6 +26,7 @@ class CuentaTest {
     @Test
     void testSaldoCuenta() {
         Cuenta cuenta = new Cuenta("Diego", new BigDecimal("1000.12345"));
+        assertNotNull(cuenta.getSaldo());
         assertEquals(1000.12345, cuenta.getSaldo().doubleValue());
         assertFalse(cuenta.getSaldo().compareTo(BigDecimal.ZERO) < 0);
     }
@@ -36,4 +40,30 @@ class CuentaTest {
         assertEquals(cuenta, cuenta2);
     }
 
+    @Test
+    void testDebitoCuenta() {
+        Cuenta cuenta = new Cuenta("Diego", new BigDecimal("1000.12345"));
+        cuenta.debito(new BigDecimal(100));
+        assertNotNull(cuenta.getSaldo());
+        assertEquals(900, cuenta.getSaldo().intValue());
+        assertEquals("900.12345", cuenta.getSaldo().toPlainString());
+    }
+
+    @Test
+    void testCreditoCuenta() {
+        Cuenta cuenta = new Cuenta("Diego", new BigDecimal("1000.12345"));
+        cuenta.credito(new BigDecimal(100));
+        assertNotNull(cuenta.getSaldo());
+        assertEquals(1100, cuenta.getSaldo().intValue());
+        assertEquals("1100.12345", cuenta.getSaldo().toPlainString());
+    }
+
+    @Test
+    void testDineroInsuficienteException() {
+        Cuenta cuenta = new Cuenta("Diego", new BigDecimal("1000.12345"));
+        Exception exception = assertThrows(DineroInsuficienteException.class, () -> cuenta.debito(new BigDecimal(1500)));
+        String actual = exception.getMessage();
+        String expected = "Dinero insuficiente";
+        assertEquals(expected, actual);
+    }
 }
