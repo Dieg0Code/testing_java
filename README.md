@@ -114,3 +114,39 @@ class CuentaTest {
 ```
 
 En este caso testeamos el saldo de la cuenta, verificando si el valor es igual al esperado y si es mayor a 0, mediante **Assertions.assertFalse**, con esto estamos esperando que la comprobación de que el saldo es mayor a 0 sea falsa, si devolviera verdadero, la prueba fallaría.
+
+## TDD (Test Driven Development) con JUnit
+
+El Test Driven Development es una técnica de desarrollo de software que se basa en escribir primero las pruebas unitarias antes de escribir el código.
+
+Por ejemplo, siguiendo el ejemplo, si queremos validar si dos instancias de la clase Cuenta son iguales, primero escribimos la prueba y luego el código.
+
+```java
+    @Test
+    void testReferenciaCuenta() {
+        Cuenta cuenta = new Cuenta("John Doe", new BigDecimal("8900.999"));
+        Cuenta cuenta2 = new Cuenta("John Doe", new BigDecimal("8900.999"));
+
+        // assertNotEquals(cuenta, cuenta2);
+        assertEquals(cuenta, cuenta2);
+    }
+```
+
+Para que esta prueba pase de manera exitosa debemos sobreescribir el método equals en la clase Cuenta.
+
+```java
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof Cuenta)) {
+            return false;
+        }
+        Cuenta c = (Cuenta) obj;
+        if (this.persona == null || this.saldo == null) {
+            return false;
+        }
+
+        return this.persona.equals(c.getPersona()) && this.saldo.equals(c.getSaldo());
+    }
+```
+
+De esta manera, estamos evaluando primero si el objeto no es una instancia de la clase Cuenta, en cuyo caso devolvemos false, luego si ambos atributos, nombre y saldo no son nulos, y por último comprobamos si tanto el nombre de la persona guardado en el atributo persona y el saldo guardado en el atributo saldo son iguales a los valores de la instancia de la clase Cuenta que estamos comparando. De esta manera estamos evaluando mediante el test si ambas instancias de la clase Cuenta son iguales en base a los valores de sus atributos, si no sobrescribimos el método equals, el test evaluara amabas infancias por referencia, por lo que siempre serian diferentes.
