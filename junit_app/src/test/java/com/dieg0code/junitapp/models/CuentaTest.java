@@ -66,4 +66,50 @@ class CuentaTest {
         String expected = "Dinero insuficiente";
         assertEquals(expected, actual);
     }
+
+    @Test
+    void transferirDineroCuentas() {
+        Cuenta cuentaDiego = new Cuenta("Diego", new BigDecimal("1000.12345"));
+        Cuenta cuentaJohn = new Cuenta("John", new BigDecimal("2500.12345"));
+
+        Banco banco = new Banco();
+        banco.setNombre("Banco del Estado");
+        banco.transferir(cuentaJohn, cuentaDiego, new BigDecimal(500));
+        assertEquals("2000.12345", cuentaJohn.getSaldo().toPlainString());
+        assertEquals("1500.12345", cuentaDiego.getSaldo().toPlainString());
+    }
+
+    @Test
+    void testRelacionBancoCuenta() {
+        Cuenta cuentaDiego = new Cuenta("Diego", new BigDecimal("1000.12345"));
+        Cuenta cuentaJohn = new Cuenta("John", new BigDecimal("2500.12345"));
+
+        Banco banco = new Banco();
+        banco.addCuenta(cuentaDiego);
+        banco.addCuenta(cuentaJohn);
+
+        banco.setNombre("Banco del Estado");
+        banco.transferir(cuentaJohn, cuentaDiego, new BigDecimal(500));
+        assertEquals("2000.12345", cuentaJohn.getSaldo().toPlainString());
+        assertEquals("1500.12345", cuentaDiego.getSaldo().toPlainString());
+
+        assertEquals(2, banco.getCuentas().size());
+        assertTrue(banco.getCuentas().contains(cuentaDiego));
+        assertTrue(banco.getCuentas().contains(cuentaJohn));
+
+        assertEquals("Banco del Estado", cuentaDiego.getBanco().getNombre());
+        assertEquals("Banco del Estado", cuentaJohn.getBanco().getNombre());
+
+        assertEquals("Diego", banco.getCuentas().stream()
+                .filter(c -> c.getPersona().equals("Diego"))
+                .findFirst()
+                .get()
+                .getPersona()
+        );
+
+        assertTrue(banco.getCuentas().stream()
+                .anyMatch(c -> c.getPersona().equals("Diego"))
+        );
+
+    }
 }
