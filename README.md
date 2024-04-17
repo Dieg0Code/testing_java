@@ -149,4 +149,53 @@ Para que esta prueba pase de manera exitosa debemos sobreescribir el método equ
     }
 ```
 
-De esta manera, estamos evaluando primero si el objeto no es una instancia de la clase Cuenta, en cuyo caso devolvemos false, luego si ambos atributos, nombre y saldo no son nulos, y por último comprobamos si tanto el nombre de la persona guardado en el atributo persona y el saldo guardado en el atributo saldo son iguales a los valores de la instancia de la clase Cuenta que estamos comparando. De esta manera estamos evaluando mediante el test si ambas instancias de la clase Cuenta son iguales en base a los valores de sus atributos, si no sobrescribimos el método equals, el test evaluara amabas infancias por referencia, por lo que siempre serian diferentes.
+De esta manera, estamos evaluando primero si el objeto no es una instancia de la clase Cuenta, en cuyo caso devolvemos false, luego si ambos atributos, nombre y saldo no son nulos, y por último comprobamos si tanto el nombre de la persona guardado en el atributo persona y el saldo guardado en el atributo saldo son iguales a los valores de la instancia de la clase Cuenta que estamos comparando. De esta manera estamos evaluando mediante el test si ambas instancias de la clase Cuenta son iguales en base a los valores de sus atributos, si no sobrescribimos el método equals, el test evaluara ambas instancias por referencia, por lo que siempre serian diferentes.
+
+
+### assertAll
+
+Podemos usar **assertAll** para evaluar varias aserciones en un solo test.
+
+```java
+    @Test
+    void testReferenciaCuenta() {
+        Cuenta cuenta = new Cuenta("John Doe", new BigDecimal("8900.999"));
+        Cuenta cuenta2 = new Cuenta("John Doe", new BigDecimal("8900.999"));
+
+        assertAll(() -> {
+            assertEquals(cuenta, cuenta2);
+        }, () -> {
+            assertEquals(cuenta.getPersona(), cuenta2.getPersona());
+        }, () -> {
+            assertEquals(cuenta.getSaldo(), cuenta2.getSaldo());
+        });
+    }
+```
+
+Mediante lambdas definimos las aserciones que queremos evaluar, en este caso, si ambas instancias de la clase Cuenta son iguales, si el nombre de la persona es igual y si el saldo es igual. Por solo dar un ejemplo.
+
+Usar **assertAll** es útil ya que podemos evaluar multiples aserciones al mismo tiempo y si falla alguna nos dice cual fue. A diferencia de usar **assertEquals** que si falla una aserción, no evalúa las demás.
+
+### Mensajes de falla en los métodos de aserción
+
+Podemos agregar mensajes personalizados a las aserciones para que cuando falle una prueba, nos diga que fue lo que falló.
+
+```java
+    @Test
+    void testReferenciaCuenta() {
+        Cuenta cuenta = new Cuenta("John Doe", new BigDecimal("8900.999"));
+        Cuenta cuenta2 = new Cuenta("John Doe", new BigDecimal("8900.999"));
+
+        assertAll(() -> {
+            assertEquals(cuenta, cuenta2, () -> "Las cuentas no son iguales");
+        }, () -> {
+            assertEquals(cuenta.getPersona(), cuenta2.getPersona(), () -> "Los nombres de las cuentas no son iguales");
+        }, () -> {
+            assertEquals(cuenta.getSaldo(), cuenta2.getSaldo(), () -> "Los saldos de las cuentas no son iguales");
+        });
+    }
+```
+
+Estos mensajes solo serán mostrados en caso de que se produzca el error en la prueba, son muy útiles para dar mas contexto de que fue lo que falló.
+
+Anterior a JUnit 5, los mensajes se agregaban en duro en el código, ahora podemos agregarlos de manera dinámica mediante lambdas, de esta forma se es mas eficiente y solo se construye el mensaje en caso de que falle la prueba.
