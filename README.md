@@ -199,3 +199,78 @@ Podemos agregar mensajes personalizados a las aserciones para que cuando falle u
 Estos mensajes solo serán mostrados en caso de que se produzca el error en la prueba, son muy útiles para dar mas contexto de que fue lo que falló.
 
 Anterior a JUnit 5, los mensajes se agregaban en duro en el código, ahora podemos agregarlos de manera dinámica mediante lambdas, de esta forma se es mas eficiente y solo se construye el mensaje en caso de que falle la prueba.
+
+### Anotaciones @DisplayName y @Disabled
+
+Por defecto los test muestran el nombre del método como nombre de la prueba, pero podemos personalizar esto con algo mas descriptivo que ayude a tener mas información a quien ejecute el test.
+
+```java
+    @Test
+    @DisplayName("Probando el nombre de la cuenta corriente")
+    void testNombreCuenta() {
+        Cuenta cuenta = new Cuenta("Diego", new BigDecimal("1000.12345"));
+        String expectedValue = "Diego";
+        String actualValue = cuenta.getPersona();
+        Assertions.assertTrue(actualValue.equals("Diego"));
+    }
+```
+
+Con esto estamos personalizando el nombre de la prueba, de esta manera si falla, sabremos que es lo que se estaba probando.
+
+También podemos deshabilitar una prueba con la anotación **@Disabled**.
+
+```java
+    @Test
+    @DisplayName("Probando el nombre de la cuenta corriente")
+    @Disabled
+    void testNombreCuenta() {
+        Cuenta cuenta = new Cuenta("Diego", new BigDecimal("1000.12345"));
+        String expectedValue = "Diego";
+        String actualValue = cuenta.getPersona();
+        Assertions.assertTrue(actualValue.equals("Diego"));
+    }
+```
+
+Esta anotación nos puede servir para deshabilitar pruebas que no queremos que se ejecuten por el momento, pero que no queremos borrar. Al ejecutar los test aquel que tenga esta anotación será ignorado.
+
+Un método útil que tenemos también es **fail()**, con el cual podemos forzar el error en un test, esto se puede usar en caso de que queramos ver como se comportaría un test en caso de fallar.
+
+### Ciclo de vida, anotaciones @BeforeAll, @BeforeEach, @AfterAll, @AfterEach
+
+**@BeforeAll** y **@AfterAll** son anotaciones que se ejecutan antes y después de todos los test de la clase. Mientras que **@BeforeEach** y **@AfterEach** se ejecutan antes y después de cada test.
+
+```java
+class CuentaTest {
+
+    @BeforeAll
+    static void beforeAll() {
+        System.out.println("Iniciando el test");
+    }
+
+    @BeforeEach
+    void initMethod() {
+        System.out.println("Iniciando el método de prueba");
+    }
+
+    @Test
+    @DisplayName("Probando el nombre de la cuenta corriente")
+    void testNombreCuenta() {
+        Cuenta cuenta = new Cuenta("Diego", new BigDecimal("1000.12345"));
+        String expectedValue = "Diego";
+        String actualValue = cuenta.getPersona();
+        Assertions.assertTrue(actualValue.equals("Diego"));
+    }
+
+    @AfterEach
+    void tearDown() {
+        System.out.println("Finalizando el método de prueba");
+    }
+
+    @AfterAll
+    static void afterAll() {
+        System.out.println("Finalizando el test");
+    }
+}
+```
+
+Se puede usar el ciclo de vida para inicializar recursos antes de los test y liberarlos después de los test, por ejemplo, si estamos trabajando con una base de datos, podemos inicializar la conexión en **@BeforeAll** y cerrarla en **@AfterAll** o instanciar un objeto en **@BeforeEach** y liberar la memoria en **@AfterEach**.
