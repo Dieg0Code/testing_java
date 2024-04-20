@@ -6,20 +6,36 @@ import org.junit.jupiter.api.*;
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.*;
 
 class CuentaTest {
 
     Cuenta cuenta;
 
+    private TestInfo testInfo;
+    private TestReporter testReporter;
+
     @BeforeEach
-    void initMetodoTest() {
+    void initMetodoTest(TestInfo testInfo, TestReporter testReporter) {
         this.cuenta = new Cuenta("Diego", new BigDecimal("1000.12345"));
-        System.out.println("Inicializando el método de pruebas");
+        this.testInfo = testInfo;
+        this.testReporter = testReporter;
+        testReporter.publishEntry("Ejecutando: " + testInfo.getDisplayName() + " " + testInfo.getTestMethod().orElse(null).getName() + " con Tags " + testInfo.getTags());
     }
 
     @AfterEach
     void tearDown() {
         System.out.println("Finalizando el método de pruebas");
+    }
+
+    @BeforeAll
+    static void beforeAll() {
+        System.out.println("Inicializando el test");
+    }
+
+    @AfterAll
+    static void afterAll() {
+        System.out.println("Finalizando el test");
     }
 
     @Test
@@ -38,7 +54,6 @@ class CuentaTest {
     @Test
     @DisplayName("Probando saldo de la cuenta")
     void testSaldoCuenta() {
-        cuenta = new Cuenta("Diego", new BigDecimal("1000.12345"));
         assertNotNull(cuenta.getSaldo(), "El saldo no puede ser nulo");
         assertEquals(1000.12345, cuenta.getSaldo().doubleValue(), "El saldo de la cuenta no es el esperado");
         assertFalse(cuenta.getSaldo().compareTo(BigDecimal.ZERO) < 0, "El saldo debe ser mayor a cero");
@@ -130,5 +145,27 @@ class CuentaTest {
                 )
         );
 
+    }
+
+    @Test
+    @DisplayName("[CUENTA :: TEST] Probando Assupmtions")
+    void testSaldoCuentaAssumption() {
+        boolean esDev = "Dev".equals(System.getProperty("ENV"));
+
+        assumeTrue(esDev);
+
+        assertNotNull(cuenta.getSaldo());
+        assertEquals(1000.12345, cuenta.getSaldo().doubleValue());
+    }
+
+    @Test
+    @DisplayName("[CUENTA :: TEST] Probando Assupmtions 2")
+    void testSaldoCuentaAssumption2() {
+        boolean esDev = "Dev".equals(System.getProperty("ENV"));
+
+        assumingThat(esDev, () -> {
+            assertNotNull(cuenta.getSaldo());
+            assertEquals(1000.12345, cuenta.getSaldo().doubleValue());
+        });
     }
 }
