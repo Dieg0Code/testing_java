@@ -5,3 +5,120 @@ Mockito es un framework de pruebas que nos permite crear objetos simulados **moc
 Cuando trabajamos con Mockito tenemos que preparar nuestro entorno de pruebas, por ejemplo un clase service va a tener dependencias, estas dependencias se comunican con fuentes externas como bases de datos, servicios web, etc. Para aislar estas dependencias y poder probar nuestro código de manera unitaria, vamos a utilizar Mockito para simular estas dependencias. La idea es que los test sean algo ágil por lo que no queremos esperar a que se conecte a una base de datos o a un servicio web, es por esto que se usa Mockito para crear mocks de estas dependencias, es decir, objetos simulados que se comportan como queremos.
 
 En Mockito trabajamos con tres partes, **dado que**, **cuando** y **entonces**. En la parte de **dado que** preparamos el entorno de pruebas, en la parte de **cuando** ejecutamos el método que queremos probar y en la parte de **entonces** verificamos que el método se comporta como esperamos.
+
+## Mocking
+
+Por ejemplo supongamos que tenemos una aplicación de la siguiente forma:
+
+El modelo es de un Examen que tiene un id, un nombre y una lista de preguntas.
+
+```java
+public class Examen {
+
+    private Long id;
+    private String nombre;
+    private List<String> preguntas;
+
+    public Examen(Long id, String nombre) {
+        this.id = id;
+        this.nombre = nombre;
+        this.preguntas = new ArrayList<>();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public List<String> getPreguntas() {
+        return preguntas;
+    }
+
+    public void setPreguntas(List<String> preguntas) {
+        this.preguntas = preguntas;
+    }
+}
+```
+Con un servicio que se encarga de encontrar un examen por nombre.
+
+```java
+public interface ExamenService {
+    Examen findExamenPorNombre(String nombre);
+}
+```
+
+```java
+public class ExamenServiceImpl implements ExamenService {
+
+    private ExamenRepository examenRepository;
+
+    public ExamenServiceImpl(ExamenRepository examenRepository) {
+        this.examenRepository = examenRepository;
+    }
+
+    @Override
+    public Examen findExamenPorNombre(String nombre) {
+        Optional<Examen> examenOptional = examenRepository.findAll().stream()
+                .filter(examen -> examen.getNombre().equals(nombre))
+                .findFirst();
+        Examen examen = null;
+        if (examenOptional.isPresent()) {
+            examen = examenOptional.orElseThrow();
+        }
+
+        return examen;
+    }
+}
+```
+
+Y un repositorio simulado que devuelve una lista de exámenes.
+
+```java
+public interface ExamenRepository {
+    List<Examen> findAll();
+}
+```
+
+```java
+public class ExamenRepositoryImpl implements ExamenRepository {
+    @Override
+    public List<Examen> findAll() {
+        return Arrays.asList(new Examen(5L, "Matematicas"), new Examen(6L, "Lenguaje"), new Examen(7L, "Historia"));
+    }
+}
+```
+
+Queremos probar el servicio para ver si encuentra un examen según el nombre que le pasemos
+
+```java
+class ExamenServiceImplTest {
+
+    @Test
+    void findExamenPorNombre() {
+        ExamenRepository repository = mock(ExamenRepository.class);
+        ExamenService service = new ExamenServiceImpl(repository);
+
+        List<Examen> data = Arrays.asList(new Examen(5L, "Matematicas"), new Examen(6L, "Lenguaje"), new Examen(7L, "Historia"));
+        when(repository.findAll()).thenReturn(data);
+
+        Examen examen = service.findExamenPorNombre("Matematicas");
+
+        assertNotNull(examen, "Examen no encontrado");
+        assertEquals(5L, examen.getId(), "El id del examen no es el esperado");
+        assertEquals("Matematicas", examen.getNombre(), "El nombre del examen no es el esperado");
+    }
+}
+```
+
+Mockito se usa para simular objetos, en este caso simulamos el repositorio y se lo pasamos al servicio. Luego usamos **when()** para decirle a Mockito que cuando se llame al método **findAll()** del repositorio entonces devuelva **thenReturn(data)** el array de exámenes que creamos y guardamos en la variable **data**. Con esto simulamos una respuesta del repositorio, entonces cuando luego mediante el **service** llama al método **findExamenPorNombre()** con el nombre "Matematicas" debería devolver el examen con id 5 y nombre "Matematicas", lo cual es correcto, pero no es data que venga de alguna fuente externa, sino que es lo que creamos nosotros con Mockito. Eso hace que luego los **assert** de JUnit sean correctos y el test pase.
