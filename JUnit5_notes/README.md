@@ -113,7 +113,7 @@ class CuentaTest {
     }
 ```
 
-En este caso testeamos el saldo de la cuenta, verificando si el valor es igual al esperado y si es mayor a 0, mediante **Assertions.assertFalse**, con esto estamos esperando que la comprobación de que el saldo es mayor a 0 sea falsa, si devolviera verdadero, la prueba fallaría.
+En este caso testeamos el saldo de la cuenta, verificando si el valor es igual al esperado y esperando que la expresión **cuenta.getSaldo().compareTo(BigDecimal.ZERO) < 0** sea falsa (0 es mayor a saldo?) en otras palabras no queremos que el saldo sea negativo.
 
 ## TDD (Test Driven Development) con JUnit
 
