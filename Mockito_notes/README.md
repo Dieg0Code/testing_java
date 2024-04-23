@@ -122,3 +122,24 @@ class ExamenServiceImplTest {
 ```
 
 Mockito se usa para simular objetos, en este caso simulamos el repositorio **mock(ExamenRepository.class)** y se lo pasamos al servicio. Luego usamos **when()** para decirle a Mockito que cuando se llame al método **findAll()** del repositorio entonces devuelva **thenReturn(data)** el array de exámenes que creamos y guardamos en la variable **data**. Con esto simulamos una respuesta del repositorio, entonces cuando luego mediante el **service** llama al método **findExamenPorNombre()** con el nombre "Matematicas" debería devolver el examen con id 5 y nombre "Matematicas", lo cual es correcto, pero no es data que venga de alguna fuente externa, sino que es lo que creamos nosotros con Mockito. Eso hace que luego los **assert** de JUnit sean correctos y el test pase.
+
+
+Como nota, no se puede hacer mock de cualquier método, solo de aquellos que son públicos o default, pero no de métodos privados,tampoco de métodos estáticos o métodos final.
+
+### Verify
+
+Otro método importante de Mockito al igual que **when** es **verify**. **verify** se usa para verificar que un método de un mock se haya llamado. Por ejemplo si queremos verificar que el método **findAll()** del repositorio se haya llamado una vez, podemos hacer lo siguiente:
+
+```java
+verify(repository).findAll();
+```
+
+Esto se usa porque quizás algún método se encuentra dentro de un if y podría no ejecutarse, por lo que con **verify** podemos asegurarnos que se haya llamado y en caso de que no se haya llamado el test fallará.
+
+Podemos definir cuantas veces queremos que se llame un método, por ejemplo si queremos que se llame dos veces:
+
+```java
+verify(repository, times(2)).findAll();
+```
+
+Esto va a ir dependiendo de la lógica de nuestro método, si queremos que se llame una vez, dos veces, etc.

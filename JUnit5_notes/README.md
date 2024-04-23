@@ -318,7 +318,7 @@ Con esto forzamos a que la clase maneje una instancia compartida para cada méto
 
 ### Test condicionales con @EnabledOnOs, @EnabledOnJre, @EnabledIfSystemProperty
 
-Los test condicionales son aquellos que se van a ejecta en ciertos escenarios, dependiendo del contexto, por ejemplo, ejecutar un test solo si estamos en un sistema operativo en particular, o si estamos en una versión de Java en particular.
+Los test condicionales son aquellos que se van a ejecutar en ciertos escenarios, dependiendo del contexto, por ejemplo, ejecutar un test solo si estamos en un sistema operativo en particular, o si estamos en una versión de Java en particular.
 
 ```java
 @Test
