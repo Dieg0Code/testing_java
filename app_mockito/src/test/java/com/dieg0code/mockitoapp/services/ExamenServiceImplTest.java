@@ -6,6 +6,11 @@ import com.dieg0code.mockitoapp.repositories.ExamenRepositoryImpl;
 import com.dieg0code.mockitoapp.repositories.PreguntaRespository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -15,18 +20,23 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
 class ExamenServiceImplTest {
 
+    @Mock
     ExamenRepository repository;
-    ExamenService service;
+    @Mock
     PreguntaRespository preguntaRespository;
 
+    @InjectMocks
+    ExamenServiceImpl service;
+
+    /*
     @BeforeEach
     void setUp() {
-        repository = mock(ExamenRepository.class);
-        preguntaRespository = mock(PreguntaRespository.class);
-        service = new ExamenServiceImpl(repository, preguntaRespository);
+        MockitoAnnotations.openMocks(this);
     }
+     */
 
     @Test
     void findExamenPorNombre() {
@@ -85,5 +95,20 @@ class ExamenServiceImplTest {
 
         verify(repository).findAll();
         verify(preguntaRespository).findPreguntasPorExamenId(5L);
+    }
+
+    @Test
+    void guardarExamenTest() {
+        Examen newExamen = Data.EXAMEN;
+        newExamen.setPreguntas(Data.PREGUNTAS);
+
+        when(repository.guardar(any(Examen.class))).thenReturn(Data.EXAMEN);
+        Examen examen = service.guardar(newExamen);
+        assertNotNull(examen.getId());
+        assertEquals(8L, examen.getId());
+        assertEquals("Fisica", examen.getNombre());
+
+        verify(repository).guardar(any(Examen.class));
+        verify(preguntaRespository).guardarVarias(anyList());
     }
 }

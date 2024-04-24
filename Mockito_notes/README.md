@@ -143,3 +143,68 @@ verify(repository, times(2)).findAll();
 ```
 
 Esto va a ir dependiendo de la lógica de nuestro método, si queremos que se llame una vez, dos veces, etc.
+
+### Inyección de dependencias con @Mock, @InjectMocks y @ExtendWith()
+
+Para no tener que estar creando mocks y servicios en cada test, Mockito nos provee de las anotaciones **@Mock** y **@InjectMocks**. **@Mock** se usa para crear mocks y **@InjectMocks** se usa para inyectar los mocks en la clase que queremos probar.
+
+Por ejemplo. en vez de nosotros estar creando instancias de alguna clase para luego inyectarlas en algún servicio, Mockito nos provee de estas anotaciones para hacerlo de manera automática.
+
+```java
+    ExamenRepository repository;
+    ExamenService service;
+    PreguntaRespository preguntaRespository;
+
+    @BeforeEach
+    void setUp() {
+        repository = mock(ExamenRepository.class);
+        preguntaRespository = mock(PreguntaRespository.class);
+        service = new ExamenServiceImpl(repository, preguntaRespository);
+    }
+```
+
+Esto lo podríamos reemplazar mediante las anotaciones de la siguiente forma:
+
+```java
+    @Mock
+    ExamenRepository repository;
+
+    @Mock
+    PreguntaRespository preguntaRespository;
+
+    @InjectMocks
+    ExamenServiceImpl service;
+```
+
+Con esto estamos instanciando los mocks de los repositorios y luego inyectándolos en el servicio, de la misma forma que lo hacíamos manualmente.
+
+Para que esto funcione debemos habilitarlo, para eso existen dos formas:
+
+```java
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+```
+
+La otra forma es anotar la clase con **@ExtendWith(MockitoExtension.class)**
+
+```java
+@ExtendWith(MockitoExtension.class)
+class ExamenServiceImplTest {}
+```
+
+Con esto ya podemos usar las anotaciones **@Mock** y **@InjectMocks** para inyectar dependencias en nuestras pruebas.
+
+También para tener esto, es importante tener la dependencia de mockito-junit-jupiter en nuestro archivo pom.xml
+
+```xml
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-junit-jupiter</artifactId>
+    <version>3.11.2</version>
+    <scope>test</scope>
+</dependency>
+```
+
+Esta dependencia integra Mockito con el framework de pruebas JUnit 5. La version debe ser la misma que la de Mockito-core, en este caso 3.11.2.
