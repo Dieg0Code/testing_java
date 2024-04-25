@@ -276,3 +276,19 @@ Los Test con Mockito tienen 3 etapas, **given**, **when** y **then**. En la etap
 ```
 
 En el ejemplo del test anterior, en la etapa de **given** creamos un nuevo examen y le seteamos las preguntas, luego simulamos el guardado del examen con Mockito. En la etapa de **when** llamamos al método **guardar()** del servicio y en la etapa de **then** verificamos que el examen se haya guardado correctamente. Estas pruebas se clasifican como BDD (Behavior Driven Development) ya que se enfocan en el comportamiento del método que estamos probando.
+
+### Comprobación de excepciones usando when y thenThrow
+
+```java
+    void testManejoException() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES_ID_NULL);
+        when(preguntaRespository.findPreguntasPorExamenId(isNull())).thenThrow(IllegalArgumentException.class);
+
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> service.findExamenPorNombreConPreguntas("Matematicas"));
+
+        assertEquals(IllegalArgumentException.class, exception.getClass());
+        verify(preguntaRespository).findPreguntasPorExamenId(isNull());
+    }
+```
+
+En este caso estamos simulando una excepción, cuando se llame al método **findPreguntasPorExamenId()** del repositorio de preguntas con un id nulo, entonces lanzamos una excepción **thenThrow(IllegalArgumentException.class)**. Luego en el test verificamos que se haya lanzado la excepción con **assertThrows(IllegalArgumentException.class, () -> service.findExamenPorNombreConPreguntas("Matematicas"))** y verificamos que se haya llamado al método **findPreguntasPorExamenId()** con un id nulo. Esto es útil para probar el manejo de excepciones en nuestro código.
