@@ -208,3 +208,71 @@ También para tener esto, es importante tener la dependencia de mockito-junit-ju
 ```
 
 Esta dependencia integra Mockito con el framework de pruebas JUnit 5. La version debe ser la misma que la de Mockito-core, en este caso 3.11.2.
+
+### Invocation Arguments
+
+```java
+ @Test
+    void guardarExamenTest() {
+        Examen newExamen = Data.EXAMEN;
+        newExamen.setPreguntas(Data.PREGUNTAS);
+
+        when(repository.guardar(any(Examen.class))).then(new Answer<Examen>() {
+
+            Long secuencia = 8L;
+
+            @Override
+            public Examen answer(InvocationOnMock invocationOnMock) throws Throwable {
+                Examen examen = invocationOnMock.getArgument(0);
+                examen.setId(secuencia++);
+                return examen;
+            }
+        });
+        
+        Examen examen = service.guardar(newExamen);
+        assertNotNull(examen.getId());
+        assertEquals(8L, examen.getId());
+        assertEquals("Fisica", examen.getNombre());
+
+        verify(repository).guardar(any(Examen.class));
+        verify(preguntaRespository).guardarVarias(anyList());
+    }
+```
+
+En este caso estamos simulando el guardado de un examen, cuando se llame al método **guardar()** del repositorio, entonces creamos un nuevo examen simulando la respuesta con **new Answer\<Examen>()**. En este caso simulamos el id del examen, el cual lo hacemos autoincremental, de esta forma cuando se llame al método **guardar()** del repositorio, el examen que se guarde va a tener un id autoincremental.
+
+Los Test con Mockito tienen 3 etapas, **given**, **when** y **then**. En la etapa de **given** preparamos el entorno de pruebas, en la etapa de **when** ejecutamos el método que queremos probar y en la etapa de **then** verificamos que el método se comporta como esperamos.
+
+```java
+    @Test
+    void guardarExamenTest() {
+        // given
+        Examen newExamen = Data.EXAMEN;
+        newExamen.setPreguntas(Data.PREGUNTAS);
+
+        when(repository.guardar(any(Examen.class))).then(new Answer<Examen>() {
+
+            Long secuencia = 8L;
+
+            @Override
+            public Examen answer(InvocationOnMock invocationOnMock) throws Throwable {
+                Examen examen = invocationOnMock.getArgument(0);
+                examen.setId(secuencia++);
+                return examen;
+            }
+        });
+
+        // when
+        Examen examen = service.guardar(newExamen);
+
+        // then
+        assertNotNull(examen.getId());
+        assertEquals(8L, examen.getId());
+        assertEquals("Fisica", examen.getNombre());
+
+        verify(repository).guardar(any(Examen.class));
+        verify(preguntaRespository).guardarVarias(anyList());
+    }
+```
+
+En el ejemplo del test anterior, en la etapa de **given** creamos un nuevo examen y le seteamos las preguntas, luego simulamos el guardado del examen con Mockito. En la etapa de **when** llamamos al método **guardar()** del servicio y en la etapa de **then** verificamos que el examen se haya guardado correctamente. Estas pruebas se clasifican como BDD (Behavior Driven Development) ya que se enfocan en el comportamiento del método que estamos probando.
