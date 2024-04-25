@@ -292,3 +292,83 @@ En el ejemplo del test anterior, en la etapa de **given** creamos un nuevo exame
 ```
 
 En este caso estamos simulando una excepción, cuando se llame al método **findPreguntasPorExamenId()** del repositorio de preguntas con un id nulo, entonces lanzamos una excepción **thenThrow(IllegalArgumentException.class)**. Luego en el test verificamos que se haya lanzado la excepción con **assertThrows(IllegalArgumentException.class, () -> service.findExamenPorNombreConPreguntas("Matematicas"))** y verificamos que se haya llamado al método **findPreguntasPorExamenId()** con un id nulo. Esto es útil para probar el manejo de excepciones en nuestro código.
+
+### ArgumentMatchers
+
+Los argument matchers permiten saber si coincide el valor real que se pasa por argumento en un método con el valor definido en el mock, por ejemplo, en el **when()** o en el **verify()**. En otras palabras, se usan para asegurarse de que ciertos argumentos se pasen a los mocks.
+
+```java
+@Test
+    void testArgumentMatchers() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+        when(preguntaRespository.findPreguntasPorExamenId(anyLong())).thenReturn(Data.PREGUNTAS);
+        service.findExamenPorNombreConPreguntas("Matematicas");
+
+        verify(repository).findAll();
+        verify(preguntaRespository).findPreguntasPorExamenId(argThat(arg -> arg != null && arg > 0));
+
+    }
+```
+
+El argument matcher seria:
+
+```java
+verify(preguntaRespository).findPreguntasPorExamenId(argThat(arg -> arg != null && arg > 0));
+```
+
+En donde verificamos que el id sea diferente de nulo y mayor a 0.
+
+También podemos implementar una clase que implemente la interfaz **ArgumentMatcher** para hacer una validación más compleja.
+
+```java
+class MiArgumentMatcher implements ArgumentMatcher<Long> {
+
+    @Override
+    public boolean matches(Long argument) {
+        return argument != null && argument > 0;
+    }
+}
+```
+
+En esta podemos agregar la lógica que queramos para validar el o los argumentos que queramos.
+
+```java
+verify(preguntaRespository).findPreguntasPorExamenId(argThat(new MiArgumentMatcher()));
+```
+
+### Capturar argumentos con ArgumentCaptor
+
+Con **ArgumentCaptor** podemos capturar los argumentos que se pasan a un método de un mock, esto es útil para verificar que se pasen los argumentos correctos a un método.
+
+```java
+    @Test
+    void testArgumentCaptor() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+        //when(preguntaRespository.findPreguntasPorExamenId(anyLong())).thenReturn(Data.PREGUNTAS);
+        service.findExamenPorNombreConPreguntas("Matematicas");
+
+        ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(Long.class);
+
+        verify(preguntaRespository).findPreguntasPorExamenId(captor.capture());
+        assertEquals(5L, captor.getValue());
+    }
+```
+
+En este caso estamos capturando el id que se pasa al método **findPreguntasPorExamenId()** del repositorio de preguntas. Luego verificamos que el id capturado sea igual a 5L ya que este es el esperado para "Matematicas".
+
+Esto también se puede hacer usando una anotación:
+
+```java
+    @Captor
+    ArgumentCaptor<Long> captor;
+
+    @Test
+    void testArgumentCaptor() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+        //when(preguntaRespository.findPreguntasPorExamenId(anyLong())).thenReturn(Data.PREGUNTAS);
+        service.findExamenPorNombreConPreguntas("Matematicas");
+
+        verify(preguntaRespository).findPreguntasPorExamenId(captor.capture());
+        assertEquals(5L, captor.getValue());
+    }
+```

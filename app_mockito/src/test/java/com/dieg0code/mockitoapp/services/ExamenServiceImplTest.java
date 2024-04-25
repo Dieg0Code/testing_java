@@ -7,9 +7,7 @@ import com.dieg0code.mockitoapp.repositories.PreguntaRespository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.*;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.stubbing.Answer;
@@ -138,5 +136,41 @@ class ExamenServiceImplTest {
 
         assertEquals(IllegalArgumentException.class, exception.getClass());
         verify(preguntaRespository).findPreguntasPorExamenId(isNull());
+    }
+
+    @Test
+    void testArgumentMatchers() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+        when(preguntaRespository.findPreguntasPorExamenId(anyLong())).thenReturn(Data.PREGUNTAS);
+        service.findExamenPorNombreConPreguntas("Matematicas");
+
+        verify(repository).findAll();
+        verify(preguntaRespository).findPreguntasPorExamenId(argThat(arg -> arg != null && arg > 0));
+        verify(preguntaRespository).findPreguntasPorExamenId(argThat(new MiArgsMatcher()));
+
+    }
+
+    public static class MiArgsMatcher implements ArgumentMatcher<Long> {
+        @Override
+        public boolean matches(Long aLong) {
+            return aLong != null && aLong > 0;
+        }
+
+        @Override
+        public String toString() {
+            return "El argumento debe ser mayor que cero y no nulo";
+        }
+    }
+
+    @Test
+    void testArgumentCaptor() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+        //when(preguntaRespository.findPreguntasPorExamenId(anyLong())).thenReturn(Data.PREGUNTAS);
+        service.findExamenPorNombreConPreguntas("Matematicas");
+
+        ArgumentCaptor<Long> captor = ArgumentCaptor.forClass(Long.class);
+
+        verify(preguntaRespository).findPreguntasPorExamenId(captor.capture());
+        assertEquals(5L, captor.getValue());
     }
 }
