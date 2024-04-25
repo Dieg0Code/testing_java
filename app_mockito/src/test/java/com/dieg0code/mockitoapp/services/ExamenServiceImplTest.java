@@ -173,4 +173,5 @@ class ExamenServiceImplTest {
         verify(preguntaRespository).findPreguntasPorExamenId(captor.capture());
         assertEquals(5L, captor.getValue());
     }
+    
 }

@@ -372,3 +372,21 @@ Esto también se puede hacer usando una anotación:
         assertEquals(5L, captor.getValue());
     }
 ```
+
+### doThrow para comprobaciones de excepciones en métodos void
+
+Cunado el método que queremos probar es void, es decir, que no devuelve nada, no podemos usar el **when()** seguido de **thenReturn()**, en estos casos podemos usar **doThrow()**.
+
+```java
+    @Test
+    void testDoThrow() {
+        Examen newExamen = Data.EXAMEN;
+        newExamen.setPreguntas(Data.PREGUNTAS);
+
+        doThrow(IllegalArgumentException.class).when(preguntaRespository).guardarVarias(anyList());
+
+        assertThrows(IllegalArgumentException.class, () -> service.guardar(newExamen));
+    }
+```
+
+La sintaxis es al revés de lo que veníamos viendo hasta ahora, primero definimos lo que va a pasar con **doThrow()** y luego el método que queremos probar.
