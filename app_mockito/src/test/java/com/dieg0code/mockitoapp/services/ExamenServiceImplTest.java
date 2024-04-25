@@ -173,5 +173,22 @@ class ExamenServiceImplTest {
         verify(preguntaRespository).findPreguntasPorExamenId(captor.capture());
         assertEquals(5L, captor.getValue());
     }
-    
+
+    @Test
+    void testDoAnswer() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+        //when(preguntaRespository.findPreguntasPorExamenId(anyLong())).thenReturn(Data.PREGUNTAS);
+        doAnswer(invocation -> {
+            Long id = invocation.getArgument(0);
+            return id == 5L ? Data.PREGUNTAS : Collections.emptyList();
+        }).when(preguntaRespository).findPreguntasPorExamenId(anyLong());
+
+        Examen examen = service.findExamenPorNombreConPreguntas("Matematicas");
+
+        assertEquals(5, examen.getPreguntas().size());
+        assertTrue(examen.getPreguntas().contains("aritmetica"));
+
+        verify(preguntaRespository).findPreguntasPorExamenId(anyLong());
+
+    }
 }

@@ -390,3 +390,29 @@ Cunado el método que queremos probar es void, es decir, que no devuelve nada, n
 ```
 
 La sintaxis es al revés de lo que veníamos viendo hasta ahora, primero definimos lo que va a pasar con **doThrow()** y luego el método que queremos probar.
+
+### doAnswer
+
+```java
+@Test
+    void testDoAnswer() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+        //when(preguntaRespository.findPreguntasPorExamenId(anyLong())).thenReturn(Data.PREGUNTAS);
+        doAnswer(invocation -> {
+            Long id = invocation.getArgument(0);
+            return id == 5L ? Data.PREGUNTAS : Collections.emptyList();
+        }).when(preguntaRespository).findPreguntasPorExamenId(anyLong());
+
+        Examen examen = service.findExamenPorNombreConPreguntas("Matematicas");
+
+        assertEquals(5, examen.getPreguntas().size());
+        assertTrue(examen.getPreguntas().contains("aritmetica"));
+
+        verify(preguntaRespository).findPreguntasPorExamenId(anyLong());
+
+    }
+```
+
+Lo que hace **doAnswer()** es básicamente decir, responder esto cuando cuando esto pase, en este caso, respondemos con las preguntas de matemáticas cuando el id sea 5L, de lo contrario respondemos con una lista vacía cuando se llama al método **findPreguntasPorExamenId()** del repositorio de preguntas.
+
+Es para personalizar la respuesta que queremos dar cuando se llama a un método de un mock.
