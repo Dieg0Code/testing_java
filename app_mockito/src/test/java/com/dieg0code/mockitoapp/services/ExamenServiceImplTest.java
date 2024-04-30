@@ -191,4 +191,78 @@ class ExamenServiceImplTest {
         verify(preguntaRespository).findPreguntasPorExamenId(anyLong());
 
     }
+
+    @Test
+    void testDoCallRealMethod() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+
+        doCallRealMethod().when(preguntaRespository).findPreguntasPorExamenId(anyLong());
+
+        Examen examen = service.findExamenPorNombreConPreguntas("Matematicas");
+        assertEquals(5L, examen.getId());
+        assertEquals("Matematicas", examen.getNombre());
+    }
+
+    @Test
+    void testSpy() {
+        ExamenRepository examenRepository = spy(ExamenRepositoryImpl.class);
+
+        Examen examen = new Examen(8L, "Fisica");
+        when(examenRepository.findAll()).thenReturn(List.of(examen));
+
+        Examen examen1 = examenRepository.findAll().get(0);
+
+        assertEquals("Fisica", examen1.getNombre());
+        assertEquals(8L, examen1.getId());
+
+        when(examenRepository.guardar(any(Examen.class))).thenReturn(new Examen(8L, "Fisica"));
+
+        Examen examenGuardado = examenRepository.guardar(new Examen(8L, "Fisica"));
+
+        assertEquals("Fisica", examenGuardado.getNombre());
+        assertEquals(8L, examenGuardado.getId());
+
+        verify(examenRepository).guardar(any(Examen.class));
+
+    }
+
+    @Test
+    void testOrdenInvocaciones() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+
+        service.findExamenPorNombreConPreguntas("Matematicas");
+        service.findExamenPorNombreConPreguntas("Lenguaje");
+
+        InOrder inOrder = inOrder(preguntaRespository);
+        inOrder.verify(preguntaRespository).findPreguntasPorExamenId(5L);
+        inOrder.verify(preguntaRespository).findPreguntasPorExamenId(6L);
+    }
+
+    @Test
+    void testOrdenInvocaciones2() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+
+        service.findExamenPorNombreConPreguntas("Matematicas");
+        service.findExamenPorNombreConPreguntas("Lenguaje");
+
+        InOrder inOrder = inOrder(repository, preguntaRespository);
+        inOrder.verify(repository).findAll();
+        inOrder.verify(preguntaRespository).findPreguntasPorExamenId(5L);
+        inOrder.verify(repository).findAll();
+        inOrder.verify(preguntaRespository).findPreguntasPorExamenId(6L);
+    }
+
+    @Test
+    void testNumeroInvocaciones() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+
+        service.findExamenPorNombreConPreguntas("Matematicas");
+        service.findExamenPorNombreConPreguntas("Matematicas");
+
+        verify(repository, times(2)).findAll();
+        verify(preguntaRespository, never()).findPreguntasPorExamenId(6L);
+        verify(preguntaRespository, atLeastOnce()).findPreguntasPorExamenId(5L);
+        verify(preguntaRespository, atLeast(2)).findPreguntasPorExamenId(5L);
+        verify(preguntaRespository, atMost(2)).findPreguntasPorExamenId(5L);
+    }
 }

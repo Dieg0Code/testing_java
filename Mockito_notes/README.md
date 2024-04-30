@@ -416,3 +416,108 @@ La sintaxis es al revés de lo que veníamos viendo hasta ahora, primero definim
 Lo que hace **doAnswer()** es básicamente decir, responder esto cuando cuando esto pase, en este caso, respondemos con las preguntas de matemáticas cuando el id sea 5L, de lo contrario respondemos con una lista vacía cuando se llama al método **findPreguntasPorExamenId()** del repositorio de preguntas.
 
 Es para personalizar la respuesta que queremos dar cuando se llama a un método de un mock.
+
+### doCallRealMethod para llamar al método real
+
+**doCallRealMethod()** se usa para llamar al método real de una clase, por ejemplo, si tenemos un método que queremos probar y queremos que se ejecute el método real, podemos usar **doCallRealMethod()**.
+
+```java
+    @Test
+    void testDoCallRealMethod() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+        //when(preguntaRespository.findPreguntasPorExamenId(anyLong())).thenReturn(Data.PREGUNTAS);
+        doCallRealMethod().when(preguntaRespository).findPreguntasPorExamenId(5L);
+
+        Examen examen = service.findExamenPorNombreConPreguntas("Matematicas");
+
+        assertEquals(5, examen.getPreguntas().size());
+        assertTrue(examen.getPreguntas().contains("aritmetica"));
+
+        verify(preguntaRespository).findPreguntasPorExamenId(5L);
+
+    }
+```
+
+Llamar al método real es útil para probar el comportamiento de este tal cual, a diferencia de los mocks en los cuales nosotros definimos el comportamiento que queremos que tengan.
+
+### Spy y doReturn
+
+Los **Spy** son una mezcla entre el objeto real y un mock. Nos permiten invocar métodos sin tener que definir **when()**, ni tener que crear ningún mock() de algún objeto, simplemente cuando invoquemos un método va a usar el método real.
+
+```java
+    @Test
+    void testDoReturn() {
+        Examen newExamen = Data.EXAMEN;
+        newExamen.setPreguntas(Data.PREGUNTAS);
+
+        ExamenRepository spy = spy(ExamenRepositoryImpl.class);
+
+        doReturn(Data.EXAMENES).when(spy).findAll();
+
+        Examen examen = spy.guardar(newExamen);
+
+        assertEquals(8L, examen.getId());
+        assertEquals("Fisica", examen.getNombre());
+
+        verify(spy).guardar(newExamen);
+    }
+```
+
+Es importante mencionar que para crear un **Spy** debe ser de una clase concreta, no de una interfaz, ya que este va a llamar métodos reales, lo cual no se puede hacer desde una interfaz. Esto es una diferencia con los mocks, ya que los mocks pueden ser de interfaces ya que siempre van a ser simulados.
+
+### Verificación del orden de invocaciones
+
+**inOrder()** es un método que nos permite verificar el orden en el que se llaman los métodos de un mock.
+
+```java
+    @Test
+    void testOrdenInvocaciones() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+
+        service.findExamenPorNombreConPreguntas("Matematicas");
+        service.findExamenPorNombreConPreguntas("Lenguaje");
+
+        InOrder inOrder = inOrder(preguntaRespository);
+        inOrder.verify(preguntaRespository).findPreguntasPorExamenId(5L);
+        inOrder.verify(preguntaRespository).findPreguntasPorExamenId(6L);
+    }
+```
+En este caso estamos verificando que primero se llame al método **findPreguntasPorExamenId()** con el id 5L y luego con el id 6L. Si se llama en otro orden el test fallará.
+
+También podemos verificar multiples mockw.
+
+```java
+    @Test
+    void testOrdenInvocaciones2() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+
+        service.findExamenPorNombreConPreguntas("Matematicas");
+        service.findExamenPorNombreConPreguntas("Lenguaje");
+
+        InOrder inOrder = inOrder(repository, preguntaRespository);
+        inOrder.verify(repository).findAll();
+        inOrder.verify(preguntaRespository).findPreguntasPorExamenId(5L);
+        inOrder.verify(repository).findAll();
+        inOrder.verify(preguntaRespository).findPreguntasPorExamenId(6L);
+    }
+```
+
+### Verificación del numero de invocaciones
+
+```java
+    @Test
+    void testNumeroInvocaciones() {
+        when(repository.findAll()).thenReturn(Data.EXAMENES);
+
+        service.findExamenPorNombreConPreguntas("Matematicas");
+        service.findExamenPorNombreConPreguntas("Matematicas");
+
+        verify(repository, times(2)).findAll();
+        verify(preguntaRespository, never()).findPreguntasPorExamenId(6L);
+        verify(preguntaRespository, atLeastOnce()).findPreguntasPorExamenId(5L);
+        verify(preguntaRespository, atLeast(2)).findPreguntasPorExamenId(5L);
+        verify(preguntaRespository, atMost(2)).findPreguntasPorExamenId(5L);
+    }
+```
+
+Tenemos varias formas de verificar las veces que se llama a un método, **times()** verifica que se llame una cantidad de veces, **never()** verifica que nunca se llame, **atLeastOnce()** verifica que se llame al menos una vez, **atLeast()** verifica que se llame al menos una cantidad de veces, **atMost()** verifica que se llame como máximo una cantidad de veces. Hay mas formas, pero estas son las más comunes.
