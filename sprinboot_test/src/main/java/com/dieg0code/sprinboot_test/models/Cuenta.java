@@ -1,12 +1,18 @@
 package com.dieg0code.sprinboot_test.models;
 
 import com.dieg0code.sprinboot_test.exceptions.DineroInsuficienteException;
+import jakarta.persistence.*;
+
 
 import java.math.BigDecimal;
 import java.util.Objects;
 
+@Entity
+@Table(name = "cuentas")
 public class Cuenta {
 
+        @Id
+        @GeneratedValue(strategy = GenerationType.IDENTITY)
         private Long id;
         private String nombre;
         private BigDecimal saldo;

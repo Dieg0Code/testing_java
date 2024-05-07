@@ -41,9 +41,9 @@ class SprinbootTestApplicationTests {
 
 	@Test
 	void contextLoads() {
-		when(cuentaRepository.findById(1L)).thenReturn(Data.CUENTA_001);
-		when(cuentaRepository.findById(2L)).thenReturn(Data.CUENTA_002);
-		when(bancoRepository.findById(1L)).thenReturn(Data.BANCO);
+		when(cuentaRepository.findById(1L)).thenReturn(Data.crearCuenta001());
+		when(cuentaRepository.findById(2L)).thenReturn(Data.crearCuenta002());
+		when(bancoRepository.findById(1L)).thenReturn(Data.crearBanco());
 
 		BigDecimal saldoOrigen = cuentaService.revisarSaldo(1L);
 		BigDecimal saldoDestino = cuentaService.revisarSaldo(2L);
@@ -67,17 +67,17 @@ class SprinbootTestApplicationTests {
 		verify(cuentaRepository, times(4)).findById(1L);
 		verify(cuentaRepository, times(3)).findById(2L);
 
-		verify(cuentaRepository, times(2)).update(any(Cuenta.class));
+		verify(cuentaRepository, times(2)).save(any(Cuenta.class));
 
 		verify(bancoRepository, times(3)).findById(1L);
-		verify(bancoRepository, times(2)).update(any(Banco.class));
+		verify(bancoRepository, times(2)).save(any(Banco.class));
 
 		verify(cuentaRepository, never()).findAll();
 	}
 
 	@Test
 	void contextLoad2() {
-		when(cuentaRepository.findById(1L)).thenReturn(Data.CUENTA_001);
+		when(cuentaRepository.findById(1L)).thenReturn(Data.crearCuenta001());
 
 		Cuenta cuenta1 = cuentaService.findById(1L);
 		Cuenta cuenta2 = cuentaService.findById(1L);
