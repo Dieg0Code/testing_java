@@ -527,3 +527,326 @@ Por ahora los dejamos retornando **null**.
 ```
 
 Y entonces pasa el test. Este es el ciclo que debemos seguir para implementar nuevos servicios y controladores bajo la filosofía TDD.
+
+## Test de Integración a servicios REST con WebTestClient
+
+Una prueba de integración de un servicio REST consiste en levantar el contexto de Spring y realizar peticiones HTTP a los endpoints de nuestra aplicación para validar que el servicio funcione correctamente en un ambiente similar al de producción.
+
+Para comenzar debemos agregar una dependencia en nuestro archivo **pom.xml**.
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-webflux</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+Luego creamos una clase de test.
+
+```java
+package com.dieg0code.sprinboot_test.controllers;
+
+import com.dieg0code.sprinboot_test.models.TransactionDTO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.reactive.server.WebTestClient;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+
+@SpringBootTest(webEnvironment = RANDOM_PORT)
+class CuentaControllerWebTestClientTest {
+
+    @Autowired
+    private WebTestClient webTestClient;
+
+    private ObjectMapper objectMapper;
+
+    @BeforeEach
+    void setUp() {
+        objectMapper = new ObjectMapper();
+    }
+
+    @Test
+    void transferirTest() throws JsonProcessingException {
+        // Given
+        TransactionDTO dto = new TransactionDTO();
+        dto.setCuentaOrigenId(1L);
+        dto.setCuentaDestinoId(2L);
+        dto.setBancoId(1L);
+        dto.setMonto(new BigDecimal("100"));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("date", LocalDate.now().toString());
+        response.put("status", "OK");
+        response.put("message", "Transferencia realizada con éxito");
+        response.put("transaction", dto);
+
+        // When
+        webTestClient.post().uri("/api/cuentas/transferir")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(dto)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.message").isNotEmpty()
+                .jsonPath("$.message").isEqualTo("Transferencia realizada con éxito")
+                .jsonPath("$.date").isEqualTo(LocalDate.now().toString())
+                .json(objectMapper.writeValueAsString(response));
+
+    }
+}
+```
+
+Comenzamos anotando la clase con **@SpringBootTest(webEnvironment = RANDOM_PORT)** en donde **RANDOM_PORT** indica que se levantará un puerto aleatorio para realizar las pruebas.
+
+Inyectamos la dependencia **WebTestClient** con **@Autowired**.
+
+Luego definimos el método de test **transferirTest** en donde comenzamos definiendo el objeto **dto** con los datos necesarios para realizar la transferencia.
+
+Luego usando el **webTestClient** realizamos una petición **post** a la url **http://localhost:8080/api/cuentas/transferir** con el objeto **dto** como contenido de la petición, esta petición se hace directamente al endpoint real, no a un mock, es por eso que para que funcione correctamente debemos tener nuestra aplicación corriendo.
+
+Definimos el tipo de contenido de la petición con **.contentType(MediaType.APPLICATION_JSON)**, el contenido de la petición con **.bodyValue(dto)** y realizamos la petición con **.exchange()**.
+
+Finalmente definimos las validaciones que esperamos en la respuesta, en este caso que el atributo **message** tenga el valor **"Transferencia realizada con éxito"**, que el atributo **date** tenga el valor de la fecha actual y que el contenido de la respuesta sea igual al objeto **response** definido previamente.
+
+Es importante que cada vez que ejecutamos los test de integración, los datos de la BD no hayan sido modificados por otro proceso o test de integración, es importante partir de cero y reiniciar el servidor antes de ejecutar los test de integración.
+
+### @TestOrder
+
+Ya que las pruebas de integración trabajan con los endpoint reales, es importante definir el orden en el que se ejecutan los test ya que, por ejemplo, si se ejecuta primero un test que hace una consulta sobre una cuenta y luego otro que hace una transferencia y luego se ejecuta uno que hace una consulta a una segunda cuenta, la cual recibió o emitió una transferencia, el resultado de esta segunda consulta no será el esperado. Para esto es el **@TestOrder**.
+
+```java
+package com.dieg0code.sprinboot_test.controllers;
+
+import com.dieg0code.sprinboot_test.models.Cuenta;
+import com.dieg0code.sprinboot_test.models.TransactionDTO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.reactive.server.WebTestClient;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT;
+
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@SpringBootTest(webEnvironment = RANDOM_PORT)
+class CuentaControllerWebTestClientTest {
+
+    @Autowired
+    private WebTestClient webTestClient;
+
+    private ObjectMapper objectMapper;
+
+    @BeforeEach
+    void setUp() {
+        objectMapper = new ObjectMapper();
+    }
+
+    @Test
+    @Order(1)
+    void transferirTest() throws JsonProcessingException {
+        // Given
+        TransactionDTO dto = new TransactionDTO();
+        dto.setCuentaOrigenId(1L);
+        dto.setCuentaDestinoId(2L);
+        dto.setBancoId(1L);
+        dto.setMonto(new BigDecimal("100"));
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("date", LocalDate.now().toString());
+        response.put("status", "OK");
+        response.put("message", "Transferencia realizada con éxito");
+        response.put("transaction", dto);
+
+        // When
+        webTestClient.post().uri("/api/cuentas/transferir")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(dto)
+                .exchange()
+                // Then
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.message").isNotEmpty()
+                .jsonPath("$.message").isEqualTo("Transferencia realizada con éxito")
+                .jsonPath("$.date").isEqualTo(LocalDate.now().toString())
+                .json(objectMapper.writeValueAsString(response));
+    }
+
+    @Test
+    @Order(2)
+    void detailsTest() {
+        webTestClient.get().uri("/api/cuentas/1")
+                .exchange()
+                // Then
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.nombre").isEqualTo("Diego")
+                .jsonPath("$.saldo").isEqualTo(900);
+    }
+
+    @Test
+    @Order(3)
+    void detailsTest2() {
+        webTestClient.get().uri("/api/cuentas/2")
+                .exchange()
+                // Then
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(Cuenta.class)
+                .consumeWith(response -> {
+                    Cuenta cuenta = response.getResponseBody();
+                    assertNotNull(cuenta);
+                    assertEquals("Pedro", cuenta.getNombre());
+                    assertEquals(2100, cuenta.getSaldo().intValue());
+                });
+    }
+}
+```
+
+Así nos aseguramos que los test se ejecuten en el orden que definimos con **@Order**, en este caso, transferimos, consultamos la cuenta 1 y luego consultamos la cuenta 2.
+
+Test para listar cuentas:
+
+```java
+@Test
+    @Order(4)
+    void findAllTest() {
+        webTestClient.get().uri("/api/cuentas")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$[0].nombre").isEqualTo("Diego")
+                .jsonPath("$[0].id").isEqualTo(1)
+                .jsonPath("$[0].saldo").isEqualTo(900)
+                .jsonPath("$[1].nombre").isEqualTo("Pedro")
+                .jsonPath("$[1].id").isEqualTo(2)
+                .jsonPath("$[1].saldo").isEqualTo(2100)
+                .jsonPath("$").isArray()
+                .jsonPath("$").value(hasSize(2));
+    }
+
+    @Test
+    @Order(5)
+    void findAllTest2() {
+        webTestClient.get().uri("/api/cuentas")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(Cuenta.class)
+                .consumeWith(response -> {
+                    List<Cuenta> cuentas = response.getResponseBody();
+                    assertNotNull(cuentas);
+                    assertEquals(2, cuentas.size());
+                    assertEquals(1L, cuentas.get(0).getId());
+                    assertEquals("Diego", cuentas.get(0).getNombre());
+                    assertEquals(900, cuentas.get(0).getSaldo().intValue());
+                    assertEquals(2L, cuentas.get(1).getId());
+                    assertEquals("Pedro", cuentas.get(1).getNombre());
+                    assertEquals(2100, cuentas.get(1).getSaldo().intValue());
+                });
+    }
+```
+
+Test para guardar una cuenta:
+
+```java
+@Test
+    @Order(6)
+    void saveTest() {
+        // Given
+        Cuenta cuenta = new Cuenta(null, "Matias", new BigDecimal("3000"));
+
+        // When
+        webTestClient.post().uri("/api/cuentas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(cuenta)
+                .exchange()
+                // Then
+                .expectStatus().isCreated()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody()
+                .jsonPath("$.id").isEqualTo(3)
+                .jsonPath("$.nombre").isEqualTo("Matias")
+                .jsonPath("$.saldo").isEqualTo(3000);
+    }
+
+    @Test
+    @Order(7)
+    void saveTest2() {
+        // Given
+        Cuenta cuenta = new Cuenta(null, "Fabian", new BigDecimal("4000"));
+
+        // When
+        webTestClient.post().uri("/api/cuentas")
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(cuenta)
+                .exchange()
+                // Then
+                .expectStatus().isCreated()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBody(Cuenta.class)
+                .consumeWith(response -> {
+                    Cuenta cuentaResponse = response.getResponseBody();
+                    assertNotNull(cuentaResponse);
+                    assertEquals(4L, cuentaResponse.getId());
+                    assertEquals("Fabian", cuentaResponse.getNombre());
+                    assertEquals(4000, cuentaResponse.getSaldo().intValue());
+                });
+    }
+```
+
+Test para eliminar una cuenta:
+
+```java
+ @Test
+    @Order(8)
+    void deleteTest() {
+        webTestClient.get().uri("/api/cuentas")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(Cuenta.class)
+                .hasSize(4);
+
+        webTestClient.delete().uri("/api/cuentas/3")
+                .exchange()
+                .expectStatus().isNoContent()
+                .expectBody().isEmpty();
+
+        webTestClient.get().uri("/api/cuentas")
+                .exchange()
+                .expectStatus().isOk()
+                .expectHeader().contentType(MediaType.APPLICATION_JSON)
+                .expectBodyList(Cuenta.class)
+                .hasSize(3);
+
+        webTestClient.get().uri("/api/cuentas/3")
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody().isEmpty();
+    }
+```
+
+En este test en el que eliminamos una cuenta, primero validamos que existan 4 cuentas, luego eliminamos una cuenta y validamos que ahora existan 3 cuentas, finalmente validamos que la cuenta eliminada ya no exista.
