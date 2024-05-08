@@ -270,3 +270,260 @@ drop table if exists cuentas CASCADE
 ```
 
 Cabe mencionar que cada método de Test es independiente de otro, por tanto, si un método test modifica información de alguna tabla, elimina, modifica o crea un registro, no afectará a otro método test ya que como se mencionó, Hibernate hace un rollback al finalizar cada método test dejando la base de datos en su estado original.
+
+## Test de Controladores con MockMvc
+
+Para los test de controladores debemos anotar la clase con **@WebMvcTest(NombreController.class)**.
+
+También demos inyectar las dependencias con **@Autowired** y usar **MockMvc** para realizar las peticiones.
+
+Considerando que nuestro controlador es el siguiente:
+
+```java
+@RestController
+@RequestMapping("/api/cuentas")
+public class CuentaController {
+
+    @Autowired
+    private CuentaService cuentaService;
+
+
+    // ***************************************************************************************
+    // ***************************************************************************************
+    // ***************************************************************************************
+
+
+    @Operation(
+            /* -------------------------------------------------------------------------- */
+            summary = "Retorna el detalle de una cuenta",
+            description = "Retorna el detalle de una cuenta mediante un identificador único"
+            /* -------------------------------------------------------------------------- */
+    )
+    @ApiResponse(
+            /* ---------------------------------------------------- */
+            responseCode = "200",
+            description = "OK",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = Cuenta.class)
+            )
+            /* ---------------------------------------------------- */
+    )
+    @GetMapping("/{id}")
+    @ResponseStatus(HttpStatus.OK)
+    public Cuenta details(@PathVariable(name = "id") Long id) {
+        return cuentaService.findById(id);
+    }
+
+
+    // ***************************************************************************************
+    // ***************************************************************************************
+    // ***************************************************************************************
+
+
+    @Operation(
+            /* -------------------------------------------------------------------------- */
+            summary = "Realiza una transferencia entre cuentas",
+            description = "Realiza una transferencia entre cuentas de un mismo banco"
+            /* -------------------------------------------------------------------------- */
+    )
+    @ApiResponse(
+            /* -------------------------------------------------------------------------- */
+            responseCode = "200",
+            description = "OK",
+            content = @Content(
+                    mediaType = "application/json",
+                    schema = @Schema(implementation = TransactionDTO.class)
+            )
+            /* -------------------------------------------------------------------------- */
+    )
+    @PostMapping("/transferir")
+    public ResponseEntity<?> transferir(@RequestBody TransactionDTO dto) {
+        cuentaService.transferir(dto.getCuentaOrigenId(), dto.getCuentaDestinoId(), dto.getMonto(), dto.getBancoId());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("date", LocalDate.now().toString());
+        response.put("status", "OK");
+        response.put("message", "Transferencia realizada con éxito");
+        response.put("transaction", dto);
+
+        return ResponseEntity.ok(response);
+    }
+}
+```	
+
+Los Test de Controladores se realizan de la siguiente manera:
+
+
+```java
+@WebMvcTest(CuentaController.class)
+class CuentaControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockBean
+    private CuentaService cuentaService;
+
+    @Test
+    void detailsTest() throws Exception {
+        //Given
+        when(cuentaService.findById(1L)).thenReturn(Data.crearCuenta001().orElseThrow());
+
+        // When
+        mockMvc.perform(get("/api/cuentas/1").contentType(MediaType.APPLICATION_JSON))
+                // Then
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.nombre").value("Diego"))
+                .andExpect(jsonPath("$.saldo").value("1000"));
+
+        verify(cuentaService, times(1)).findById(1L);
+    }
+}
+```
+
+Con **@MockBean** podemos simular el comportamiento de un servicio, en este caso **cuentaService**. **mockMvc.perform** nos permite realizar una petición a la url especificada. luego dentro de esta función empezamos definiendo el método HTTP que realiza la petición, en este caso **get**, el cual se importa desde **org.springframework.test.web.servlet.request.MockMvcRequestBuilders**.
+
+Luego definimos la url a la que se realiza la petición, en este caso **"/api/cuentas/1"**.
+
+Finalmente definimos las validaciones que esperamos en la respuesta, en este caso que el status sea **200**, que el contenido sea de tipo **application/json**, que el atributo **nombre** tenga el valor **Diego** y que el atributo **saldo** tenga el valor **1000**. Todo esto se realiza con **andExpect**.
+
+**jsonPath** nos permite acceder a los atributos de la respuesta, la sintaxis es **$.atributo**, se importa desde **org.springframework.test.web.servlet.result.MockMvcResultMatchers**.
+
+Para el test de transferir, el código es el siguiente:
+
+```java
+    @Test
+    void transferirTest() throws Exception {
+        // Given
+        TransactionDTO dto = new TransactionDTO();
+        dto.setCuentaOrigenId(1L);
+        dto.setCuentaDestinoId(2L);
+        dto.setMonto(new BigDecimal("100"));
+        dto.setBancoId(1L);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("date", LocalDate.now().toString());
+        response.put("status", "OK");
+        response.put("message", "Transferencia realizada con éxito");
+        response.put("transaction", dto);
+
+        // When
+        mockMvc.perform(post("/api/cuentas/transferir")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(dto)))
+                // Then
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.date").value(LocalDate.now().toString()))
+                .andExpect(jsonPath("$.message").value("Transferencia realizada con éxito"))
+                .andExpect(jsonPath("$.transaction.cuentaOrigenId").value(dto.getCuentaOrigenId()))
+                .andExpect(jsonPath("$.transaction.cuentaDestinoId").value(dto.getCuentaDestinoId()))
+                .andExpect(content().json(objectMapper.writeValueAsString(response)));
+
+        verify(cuentaService, times(1)).transferir(dto.getCuentaOrigenId(), dto.getCuentaDestinoId(), dto.getMonto(), dto.getBancoId());
+    }
+```
+
+En este caso, se realiza una petición **post** a la url **"/api/cuentas/transferir"**. Se define el contenido de la petición con **.content(objectMapper.writeValueAsString(dto))**, ya que la petición es de tipo **application/json** y se espera un objeto **TransactionDTO**.
+
+Finalmente se definen las validaciones que se esperan en la respuesta, en este caso que el atributo **date** tenga el valor de la fecha actual, que el atributo **message** tenga el valor **"Transferencia realizada con éxito"** y que los atributos **cuentaOrigenId** y **cuentaDestinoId** tengan los valores definidos en el objeto **dto**.
+
+También se valida que el contenido de la respuesta sea igual al objeto **response** definido previamente.
+
+Finalmente verificamos que el método **transferir** del servicio **cuentaService** se haya llamado una vez con los parámetros definidos en el objeto **dto**.
+
+### Implementando Services y Controllers con TDD
+
+Para implementar nuevos controladores y servicios bajo la filosofía TDD el ciclo seria el siguiente:
+
+1. Agregamos a la interfaz del servicio los métodos que queremos implementar.
+
+```java	
+public interface CuentaService {
+    List<Cuenta> findAll();
+
+    Cuenta save(Cuenta cuenta);
+}
+```
+
+2. Agregamos estos métodos a la implementación del servicio.
+
+```java
+public class CuentaServiceImpl implements CuentaService {
+    @Override
+    public List<Cuenta> findAll() {
+        return null;
+    }
+
+    @Override
+    public Cuenta save(Cuenta cuenta) {
+        return null;
+    }
+}
+```
+
+Por ahora los dejamos retornando **null**.
+
+3. Agregamos estos servicios al controlador.
+
+```java
+@RestController
+@RequestMapping("/api/cuentas")
+public class CuentaController {
+    @Autowired
+    private CuentaService cuentaService;
+
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public List<Cuenta> findAll() {
+        return null;
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Cuenta save(@RequestBody Cuenta cuenta) {
+        return null;
+    }
+}
+```
+
+Por ahora los dejamos retornando **null**.
+
+4. Comenzamos creando los test para los controladores.
+
+```java
+    @Test
+    void listarTest() throws Exception {
+        // Given
+        List<Cuenta> cuentas = Arrays.asList(Data.crearCuenta001().orElseThrow(), Data.crearCuenta002().orElseThrow());
+        when(cuentaService.findAll()).thenReturn(cuentas);
+
+        // When
+        mockMvc.perform(get("/api/cuentas").contentType(MediaType.APPLICATION_JSON))
+                // Then
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$[0].nombre").value("Diego"))
+                .andExpect(jsonPath("$[0].saldo").value("1000"))
+                .andExpect(jsonPath("$[1].nombre").value("John"))
+                .andExpect(jsonPath("$[1].saldo").value("2000"))
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(content().json(objectMapper.writeValueAsString(cuentas)));
+    }
+```
+
+5. Ejecutamos el test y fallará porque estamos retornando **null** en el controlador.
+
+5. Implementamos el método en el controlador.
+
+```java
+    @GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public List<Cuenta> findAll() {
+        return cuentaService.findAll();
+    }
+```
+
+Y entonces pasa el test. Este es el ciclo que debemos seguir para implementar nuevos servicios y controladores bajo la filosofía TDD.
