@@ -850,3 +850,197 @@ Test para eliminar una cuenta:
 ```
 
 En este test en el que eliminamos una cuenta, primero validamos que existan 4 cuentas, luego eliminamos una cuenta y validamos que ahora existan 3 cuentas, finalmente validamos que la cuenta eliminada ya no exista.
+
+## Test de Integración de servicios REST con TestRestTemplate
+
+**TestRestTemplate** es una clase que nos permite realizar peticiones HTTP a los endpoints de nuestra aplicación en un ambiente de test, similar a como lo hace **WebTestClient**, es una alternativa a este, por supuesto con sus propias características.
+
+Por ejemplo, para un test del endpoint de transferir, el código sería el siguiente:
+
+```java
+@TestMethodOrder(OrderAnnotation.class)
+@SpringBootTest(webEnvironment = RANDOM_PORT)
+class CuentaControllerTestRestTemplateTest {
+
+    @Autowired
+    private TestRestTemplate client;
+
+    private ObjectMapper objectMapper;
+
+    //@LocalServerPort
+    //private int port; // Se puede usar para obtener el puerto en el que se está ejecutando la aplicación
+
+    @BeforeEach
+    void setUp() {
+        objectMapper = new ObjectMapper();
+    }
+
+    @Test
+    @Order(1)
+    void transferirTest() {
+        /// Given
+        TransactionDTO dto = new TransactionDTO();
+        dto.setMonto( new BigDecimal("100"));
+        dto.setCuentaOrigenId(1L);
+        dto.setCuentaDestinoId(2L);
+        dto.setBancoId(1L);
+
+        // When
+        ResponseEntity<String> response = client.postForEntity("/api/cuentas/transferir", dto, String.class);
+        String json = response.getBody();
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());
+        assertNotNull(json);
+        assertTrue(json.contains("Transferencia realizada con éxito"));
+    }
+}
+```
+
+La sintaxis es mas simple que con **WebTestClient**, en este caso usamos **client.postForEntity** para realizar una petición **post** a la url **"/api/cuentas/transferir"** con el objeto **dto** como contenido de la petición, el tipo de respuesta esperado es **String**.
+
+Luego extraemos el contenido del body de la respuesta y lo guardamos en la variable **json**. Usamos esta variable para hacer las validaciones que esperamos en la respuesta, en este caso que el status sea **200**, que el tipo de contenido sea **application/json** y que el contenido de la respuesta contenga el mensaje **"Transferencia realizada con éxito"**.
+
+Tests para los demas endpoints:
+
+```java
+@Test
+    @Order(2)
+    void trasferirTest2() throws JsonProcessingException {
+        TransactionDTO dto = new TransactionDTO();
+        dto.setMonto( new BigDecimal("100"));
+        dto.setCuentaOrigenId(1L);
+        dto.setCuentaDestinoId(2L);
+        dto.setBancoId(1L);
+
+        // When
+        ResponseEntity<String> response = client.postForEntity("/api/cuentas/transferir", dto, String.class);
+        String json = response.getBody();
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());
+        assertNotNull(json);
+        assertTrue(json.contains("Transferencia realizada con éxito"));
+
+        // JsonNode para navegar por el json
+        JsonNode jsonNode = objectMapper.readTree(json);
+        assertEquals("Transferencia realizada con éxito", jsonNode.path("message").asText());
+        assertEquals(LocalDate.now().toString(), jsonNode.path("date").asText());
+        assertEquals("100", jsonNode.path("transaction").path("monto").asText());
+        assertEquals(1L, jsonNode.path("transaction").path("cuentaOrigenId").asLong());
+
+        Map<String, Object> res = new HashMap<>();
+        res.put("date", LocalDate.now().toString());
+        res.put("status", "OK");
+        res.put("message", "Transferencia realizada con éxito");
+        res.put("transaction", dto);
+
+        assertEquals(objectMapper.writeValueAsString(res), json);
+
+    }
+```
+
+```java
+    @Test
+    @Order(3)
+    void detailsTest() {
+        ResponseEntity<Cuenta> response = client.getForEntity("/api/cuentas/1", Cuenta.class);
+        Cuenta cuenta = response.getBody();
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());
+        assertNotNull(cuenta);
+        assertEquals(1L, cuenta.getId());
+        assertEquals("Diego", cuenta.getNombre());
+        assertEquals(new BigDecimal("800.00"), cuenta.getSaldo());
+    }
+```
+
+```java
+    @Test
+    @Order(4)
+    void testListar() {
+        ResponseEntity<Cuenta[]> response = client.getForEntity("/api/cuentas", Cuenta[].class);
+        List<Cuenta> cuentas = Arrays.asList(response.getBody());
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());
+        assertNotNull(cuentas);
+        assertFalse(cuentas.isEmpty());
+        assertEquals(2, cuentas.size());
+
+        assertEquals(1L, cuentas.get(0).getId());
+        assertEquals("Diego", cuentas.get(0).getNombre());
+        assertEquals(new BigDecimal("800.00"), cuentas.get(0).getSaldo());
+
+        assertEquals(2L, cuentas.get(1).getId());
+        assertEquals("Pedro", cuentas.get(1).getNombre());
+        assertEquals(new BigDecimal("2200.00"), cuentas.get(1).getSaldo());
+
+    }
+```
+
+```java
+    @Test
+    @Order(5)
+    void testGuardar() {
+        Cuenta cuenta = new Cuenta(null, "John", new BigDecimal("3000.00"));
+
+        ResponseEntity<Cuenta> response = client.postForEntity("/api/cuentas", cuenta, Cuenta.class);
+        Cuenta cuentaResponse = response.getBody();
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());
+        assertNotNull(cuentaResponse);
+        assertEquals(3L, cuentaResponse.getId());
+        assertEquals("John", cuentaResponse.getNombre());
+        assertEquals(new BigDecimal("3000.00"), cuentaResponse.getSaldo());
+    }
+```
+
+```java
+    @Test
+    @Order(6)
+    void testEliminar() {
+        ResponseEntity<Cuenta[]> response = client.getForEntity("/api/cuentas", Cuenta[].class);
+        List<Cuenta> cuentas = Arrays.asList(response.getBody());
+
+        assertEquals(HttpStatus.OK, response.getStatusCode());
+        assertEquals(MediaType.APPLICATION_JSON, response.getHeaders().getContentType());
+        assertNotNull(cuentas);
+        assertFalse(cuentas.isEmpty());
+        assertEquals(3, cuentas.size());
+        assertTrue(cuentas.stream().anyMatch(c -> c.getId() == 3));
+
+        client.delete("/api/cuentas/3");
+
+        response = client.getForEntity("/api/cuentas", Cuenta[].class);
+        cuentas = Arrays.asList(response.getBody());
+
+        assertEquals(2, cuentas.size());
+
+        ResponseEntity<Cuenta> response2 = client.getForEntity("/api/cuentas/3", Cuenta.class);
+        assertEquals(HttpStatus.NOT_FOUND, response2.getStatusCode());
+        assertFalse(response2.hasBody());
+    }
+```
+
+### Problemas al ejecutar todos los test
+
+Debido a que estamos usando ambos, **WebTestClient** y **TestRestTemplate**, al ejecutar todos los test, puede que se genere un error debido a que ambos interactúan y modifican datos, por lo que puede que choquen entre sí.
+
+Normalmente solo vamos a usar uno de los dos para hacer tests de integración, en este caso usamos dos para mostrar las diferencias entre ambos.
+
+Podemos solucionar esto usando **@Tag("integracion_rt")** y **@Tag("integracion_wtc")** para marcar los test que usan **TestRestTemplate** y **WebTestClient** respectivamente, para luego ejecutar solo los test que queremos. Entonces podemos configurar la configuración, en este caso de IntelliJ, para que ejecute solo los test que queremos en base a los tags.
+
+También podemos ejecutar los test desde la terminal y excluir los test que no queremos ejecutar.
+
+```bash
+.\mvnw test -Dgroups="!integracion_rt"
+```
+
+**mvnw** es el wrapper de maven que viene incluido en el proyecto, **test** es el comando para ejecutar los test, **-Dgroups="!integracion_rt"** es para excluir los test que tengan el tag **integracion_rt**.
+
+## Diferencias entre WebTestClient y TestRestTemplate
+
+**WebTestClient** esta hecho para trabajar con programación reactiva, es decir, con **Spring WebFlux**, mientras que **TestRestTemplate** esta hecho para trabajar con programación imperativa, es decir, con **Spring MVC**.
+
+Por lo que lo que en este caso, ya que nuestra api no es reactiva, seria mas común que usemos **TestRestTemplate** que ya viene incluido con Spring Boot, pero podemos usar **WebTestClient** si queremos simplemente agregando la dependencia en nuestro archivo **pom.xml**.
